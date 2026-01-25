@@ -1,3 +1,10 @@
+import 'package:bb3_helper/models/league.dart';
+import 'package:bb3_helper/prefs.dart';
+import 'package:bb3_helper/screens/competitions.dart';
+import 'package:bb3_helper/screens/leagues.dart';
+import 'package:bb3_helper/screens/login.dart';
+import 'package:bb3_helper/screens/settings.dart';
+import 'package:bb3_helper/services/admin_website_service.dart';
 import 'package:bb3_helper/theme.dart';
 import 'package:fluent_ui/fluent_ui.dart' hide Page;
 import 'package:flutter/foundation.dart';
@@ -124,29 +131,27 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> with WindowListener {
-  bool value = false;
-
-  // int index = 0;
-
   final viewKey = GlobalKey(debugLabel: 'Navigation View Key');
   final searchKey = GlobalKey(debugLabel: 'Search Bar Key');
   final searchFocusNode = FocusNode();
   final searchController = TextEditingController();
 
+  bool _loggingIn = false;
+
   late final List<NavigationPaneItem> originalItems =
       [
         PaneItem(
-          key: const ValueKey('/'),
+          key: const ValueKey('/leagues'),
           icon: const WindowsIcon(WindowsIcons.courthouse),
           title: const Text('Leagues'),
           body: const SizedBox.shrink(),
         ),
-        PaneItem(
-          key: const ValueKey('/'),
-          icon: const WindowsIcon(WindowsIcons.people),
-          title: const Text('Teams'),
-          body: const SizedBox.shrink(),
-        ),
+        // PaneItem(
+        //   key: const ValueKey('/'),
+        //   icon: const WindowsIcon(WindowsIcons.people),
+        //   title: const Text('Teams'),
+        //   body: const SizedBox.shrink(),
+        // ),
       ].map<NavigationPaneItem>((e) {
         PaneItem buildPaneItem(PaneItem item) {
           return PaneItem(
@@ -176,8 +181,7 @@ class _MyHomePageState extends State<MyHomePage> with WindowListener {
             }).toList(),
           );
         }
-        if (e is PaneItem) return buildPaneItem(e);
-        return e;
+        return buildPaneItem(e);
       }).toList();
   late final List<NavigationPaneItem> footerItems = [
     PaneItemSeparator(),
@@ -192,17 +196,18 @@ class _MyHomePageState extends State<MyHomePage> with WindowListener {
         }
       },
     ),
-    _LinkPaneItemAction(
-      icon: const WindowsIcon(WindowsIcons.code),
-      title: const Text('Source code'),
-      link: 'https://github.com/bdlukaa/fluent_ui',
-      body: const SizedBox.shrink(),
-    ),
+    // _LinkPaneItemAction(
+    //   icon: const WindowsIcon(WindowsIcons.code),
+    //   title: const Text('Source code'),
+    //   link: 'https://github.com/bdlukaa/fluent_ui',
+    //   body: const SizedBox.shrink(),
+    // ),
   ];
 
   @override
   void initState() {
     windowManager.addListener(this);
+    _autoLogin();
     super.initState();
   }
 
@@ -212,6 +217,34 @@ class _MyHomePageState extends State<MyHomePage> with WindowListener {
     searchController.dispose();
     searchFocusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _autoLogin() async {
+    final username = await Prefs.instance.username;
+    final password = await Prefs.instance.password;
+    if (username != null && password != null) {
+      setState(() {
+        _loggingIn = true;
+      });
+      final success = await AdminWebsiteService.instance.login(
+        username,
+        password,
+      );
+      if (success) {
+        if (context.mounted) {
+          context.go('/leagues');
+        }
+      }
+      setState(() {
+        _loggingIn = false;
+      });
+    }
+  }
+
+  Future<void> logout() async {
+    await AdminWebsiteService.instance.logout();
+    Prefs.instance.username = null;
+    Prefs.instance.password = null;
   }
 
   int _calculateSelectedIndex(BuildContext context) {
@@ -314,20 +347,31 @@ class _MyHomePageState extends State<MyHomePage> with WindowListener {
         actions: Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
+            ListenableBuilder(
+              listenable: AdminWebsiteService.instance,
+              builder: (BuildContext context, Widget? child) {
+                return AdminWebsiteService.instance.loading ? ProgressRing() : Container();
+              }),
+            SizedBox(width: 20,),
             Align(
               alignment: AlignmentDirectional.centerEnd,
               child: Padding(
                 padding: const EdgeInsetsDirectional.only(end: 8.0),
-                child: ToggleButton(
-                  checked: FluentTheme.of(context).brightness.isDark,
-                  onChanged: (v) {
-                    if (v) {
-                      appTheme.mode = ThemeMode.dark;
-                    } else {
-                      appTheme.mode = ThemeMode.light;
-                    }
+                child: ListenableBuilder(
+                  listenable: AdminWebsiteService.instance,
+                  builder: (BuildContext context, Widget? child) {
+                    return Button(
+                      onPressed: () async {
+                        if (AdminWebsiteService.instance.user != null) {
+                          await logout();
+                        }
+                        if (context.mounted) {
+                          context.go('/login');
+                        }
+                      },
+                      child: Text(AdminWebsiteService.instance.user != null ? 'Logout' : 'Login'),
+                    );
                   },
-                  child: const Text('Dark Mode'),
                 ),
               ),
             ),
@@ -347,6 +391,7 @@ class _MyHomePageState extends State<MyHomePage> with WindowListener {
       pane: NavigationPane(
         selected: _calculateSelectedIndex(context),
         displayMode: appTheme.displayMode,
+        size: NavigationPaneSize(openWidth: 160),
         indicator: () {
           switch (appTheme.indicator) {
             case NavigationIndicators.end:
@@ -465,6 +510,12 @@ final router = GoRouter(
       },
       routes: [
         GoRoute(path: '/', builder: (context, state) => Container()),
+        GoRoute(path: '/leagues', builder: (context, state) => Leagues()),
+        GoRoute(path: '/league_competitions', builder: (context, state) {
+          return Competitions(league: state.extra as League,);
+        }),
+        GoRoute(path: '/settings', builder: (context, state) => Settings()),
+        GoRoute(path: '/login', builder: (context, state) => LoginScreen()),
       ],
     ),
   ],

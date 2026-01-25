@@ -1,0 +1,176 @@
+// ignore_for_file: constant_identifier_names
+
+import 'package:fluent_ui/fluent_ui.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_acrylic/flutter_acrylic.dart';
+import 'package:provider/provider.dart';
+
+import '../theme.dart';
+import '../widgets/page.dart';
+
+const List<String> accentColorNames = [
+  'System',
+  'Yellow',
+  'Orange',
+  'Red',
+  'Magenta',
+  'Purple',
+  'Blue',
+  'Teal',
+  'Green',
+];
+
+bool get kIsWindowEffectsSupported {
+  return !kIsWeb &&
+      [
+        TargetPlatform.windows,
+        TargetPlatform.linux,
+        TargetPlatform.macOS,
+      ].contains(defaultTargetPlatform);
+}
+
+const _LinuxWindowEffects = [WindowEffect.disabled, WindowEffect.transparent];
+
+const _WindowsWindowEffects = [
+  WindowEffect.disabled,
+  WindowEffect.solid,
+  WindowEffect.transparent,
+  WindowEffect.aero,
+  WindowEffect.acrylic,
+  WindowEffect.mica,
+  WindowEffect.tabbed,
+];
+
+const _MacosWindowEffects = [
+  WindowEffect.disabled,
+  WindowEffect.titlebar,
+  WindowEffect.selection,
+  WindowEffect.menu,
+  WindowEffect.popover,
+  WindowEffect.sidebar,
+  WindowEffect.headerView,
+  WindowEffect.sheet,
+  WindowEffect.windowBackground,
+  WindowEffect.hudWindow,
+  WindowEffect.fullScreenUI,
+  WindowEffect.toolTip,
+  WindowEffect.contentBackground,
+  WindowEffect.underWindowBackground,
+  WindowEffect.underPageBackground,
+];
+
+List<WindowEffect> get currentWindowEffects {
+  if (kIsWeb) return [];
+
+  if (defaultTargetPlatform == TargetPlatform.windows) {
+    return _WindowsWindowEffects;
+  } else if (defaultTargetPlatform == TargetPlatform.linux) {
+    return _LinuxWindowEffects;
+  } else if (defaultTargetPlatform == TargetPlatform.macOS) {
+    return _MacosWindowEffects;
+  }
+
+  return [];
+}
+
+class Settings extends StatefulWidget {
+  const Settings({super.key});
+
+  @override
+  State<Settings> createState() => _SettingsState();
+}
+
+class _SettingsState extends State<Settings> with PageMixin {
+  @override
+  Widget build(final BuildContext context) {
+    assert(debugCheckHasMediaQuery(context));
+    final appTheme = context.watch<AppTheme>();
+    const spacer = SizedBox(height: 10);
+    const biggerSpacer = SizedBox(height: 40);
+
+    const supportedLocales = FluentLocalizations.supportedLocales;
+    final currentLocale =
+        appTheme.locale ?? Localizations.maybeLocaleOf(context);
+    return ScaffoldPage.scrollable(
+      header: const PageHeader(title: Text('Settings')),
+      children: [
+        Text('Theme mode', style: FluentTheme.of(context).typography.subtitle),
+        spacer,
+        ...List.generate(ThemeMode.values.length, (final index) {
+          final mode = ThemeMode.values[index];
+          return Padding(
+            padding: const EdgeInsetsDirectional.only(bottom: 8),
+            child: RadioButton(
+              checked: appTheme.mode == mode,
+              onChanged: (final value) {
+                if (value) {
+                  appTheme.mode = mode;
+
+                  // if (kIsWindowEffectsSupported) {
+                  //   // some window effects require on [dark] to look good.
+                  //   // appTheme.setEffect(WindowEffect.disabled, context);
+                  //   appTheme.setEffect(appTheme.windowEffect, context);
+                  // }
+                }
+              },
+              content: Text('$mode'.replaceAll('ThemeMode.', '')),
+            ),
+          );
+        }),
+        biggerSpacer,
+        Text(
+          'Navigation Pane Display Mode',
+          style: FluentTheme.of(context).typography.subtitle,
+        ),
+        spacer,
+        ...List.generate(PaneDisplayMode.values.length, (final index) {
+          final mode = PaneDisplayMode.values[index];
+          return Padding(
+            padding: const EdgeInsetsDirectional.only(bottom: 8),
+            child: RadioButton(
+              checked: appTheme.displayMode == mode,
+              onChanged: (final value) {
+                if (value) appTheme.displayMode = mode;
+              },
+              content: Text(mode.toString().replaceAll('PaneDisplayMode.', '')),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildColorBlock(final AppTheme appTheme, final AccentColor color) {
+    return Padding(
+      padding: const EdgeInsetsDirectional.all(2),
+      child: Button(
+        onPressed: () {
+          appTheme.color = color;
+        },
+        style: ButtonStyle(
+          padding: const WidgetStatePropertyAll(EdgeInsetsDirectional.zero),
+          backgroundColor: WidgetStateProperty.resolveWith((final states) {
+            if (states.isPressed) {
+              return color.light;
+            } else if (states.isHovered) {
+              return color.lighter;
+            }
+            return color;
+          }),
+        ),
+        child: Container(
+          height: 40,
+          width: 40,
+          alignment: AlignmentDirectional.center,
+          child: appTheme.color == color
+              ? Icon(
+                  WindowsIcons.check_mark,
+                  color: color.basedOnLuminance(),
+                  size: 22,
+                )
+              : null,
+        ),
+      ),
+    );
+  }
+}

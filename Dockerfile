@@ -4,7 +4,7 @@ FROM ubuntu:focal
 ENV ANDROID_SDK_ROOT=/usr/lib/android-sdk
 
 ENV FLUTTER_SDK_ROOT=/usr/lib/flutter
-ENV FLUTTER_SDK_VERSION=3.38.0-stable
+ENV FLUTTER_SDK_VERSION=3.38.7-stable
 
 # Include flutter and android tools in path
 ENV PATH="${PATH}:${FLUTTER_SDK_ROOT}/bin:${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin:${ANDROID_SDK_ROOT}/platform-tools"
@@ -17,6 +17,7 @@ RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y \
     clang \
     cmake \
+    lld \
     ninja-build \
     libgtk-3-dev \
     watchman \
@@ -29,6 +30,8 @@ RUN apt-get update && apt-get upgrade -y && \
     git-all \
     xz-utils \
     libglu1-mesa \
+    libsecret-1-0 \
+    libsecret-1-dev \
     libc6:amd64 libstdc++6:amd64 lib32z1 libbz2-1.0:amd64 && \
     rm -rf /var/lib/apt/lists/*
 

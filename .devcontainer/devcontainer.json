@@ -1,0 +1,38 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-dockerfile
+{
+	"name": "Existing Dockerfile",
+	"build": {
+		"context": "..",
+		"dockerfile": "../Dockerfile"
+	},
+	"customizations": {
+    "vscode": {
+      "extensions": [
+        "dart-code.dart-code",
+        "dart-code.flutter"
+      ]
+    }
+  },
+  "runArgs": [
+      "--privileged",
+      "--add-host=host.docker.internal=host-gateway",
+      "-v",
+      "/dev/bus/usb:/dev/bus/usb"
+  ],
+  "forwardPorts": [8081, 5037],
+  "remoteUser": "root",
+	"mounts": [
+    "type=bind,source=/home/${localEnv:USER}/.ssh,target=/root/.ssh,readonly",
+        {
+      "type": "bind",
+      "source": "/var/run/docker.sock",
+      "target": "/var/run/docker.sock"
+    },
+    {
+      "type": "bind",
+      "source": "/run/user/1000/bus",
+      "target": "/run/user/0/bus"
+    }
+  ]
+}
