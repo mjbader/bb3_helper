@@ -5,15 +5,15 @@ class Prefs {
 
   final storage = FlutterSecureStorage();
 
-  Future<String?> get username => storage.read(key: 'username');
+  Future<String?> get username => storage.read(key: 'admin_username');
 
-  set username(String? username) {
-    storage.write(key: 'username', value: username);
+  set username(String? newUsername) {
+    storage.write(key: 'admin_username', value: newUsername);
   }
 
   Future<String?> get password => storage.read(key: 'password');
 
-  set password(String? password) {
-    storage.write(key: 'password', value: password);
+  set password(String? newPassword) {
+    storage.write(key: 'password', value: newPassword);
   }
 }

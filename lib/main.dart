@@ -1,6 +1,9 @@
+import 'package:bb3_helper/models/competition.dart';
 import 'package:bb3_helper/models/league.dart';
 import 'package:bb3_helper/prefs.dart';
+import 'package:bb3_helper/screens/competition_screen.dart';
 import 'package:bb3_helper/screens/competitions.dart';
+import 'package:bb3_helper/screens/create_competition.dart';
 import 'package:bb3_helper/screens/leagues.dart';
 import 'package:bb3_helper/screens/login.dart';
 import 'package:bb3_helper/screens/settings.dart';
@@ -369,7 +372,7 @@ class _MyHomePageState extends State<MyHomePage> with WindowListener {
                           context.go('/login');
                         }
                       },
-                      child: Text(AdminWebsiteService.instance.user != null ? 'Logout' : 'Login'),
+                      child: _loggingIn ? ProgressRing() : Text(AdminWebsiteService.instance.user != null ? 'Logout' : 'Login'),
                     );
                   },
                 ),
@@ -513,6 +516,12 @@ final router = GoRouter(
         GoRoute(path: '/leagues', builder: (context, state) => Leagues()),
         GoRoute(path: '/league_competitions', builder: (context, state) {
           return Competitions(league: state.extra as League,);
+        }),
+        GoRoute(path: '/competition', builder: (context, state) {
+          return CompetitionScreen(competition: state.extra as Competition,);
+        }),
+        GoRoute(path: '/create_competitions', builder: (context, state) {
+          return CreateCompetition(league: state.extra as League,);
         }),
         GoRoute(path: '/settings', builder: (context, state) => Settings()),
         GoRoute(path: '/login', builder: (context, state) => LoginScreen()),

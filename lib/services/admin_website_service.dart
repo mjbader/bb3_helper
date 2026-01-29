@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:bb3_helper/models/competition.dart';
 import 'package:bb3_helper/models/gamer.dart';
 import 'package:bb3_helper/models/league.dart';
+import 'package:bb3_helper/models/team.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:html/dom.dart';
@@ -33,6 +34,8 @@ class AdminWebsiteService extends ChangeNotifier {
   List<League> leagues = [];
   List<Competition> leagueCompetitions = [];
   List<Competition> competitions = [];
+  List<Team> compTeams = [];
+  List<Team> replacingTeams = [];
 
   static String? extractPHPSESSID(String cookieString) {
     final RegExp regex = RegExp(r'PHPSESSID=([a-zA-Z0-9]+);');
@@ -67,7 +70,7 @@ class AdminWebsiteService extends ChangeNotifier {
       'user_password': password,
       'env': 'bb3_live_pc',
       'login': 'Log+in',
-      'PHPSESSID': _phpsessid ?? await getPHPSESSID()
+      // 'PHPSESSID': _phpsessid ?? await getPHPSESSID()
     };
 
     final http.Response response = await http.post(
@@ -106,20 +109,20 @@ class AdminWebsiteService extends ChangeNotifier {
     leagues.clear();
     competitions.clear();
     leagueCompetitions.clear();
+    compTeams.clear();
+    replacingTeams.clear();
   }
 
   Future<void> selectLeague(String leagueId) async {
     loading = true;
 
     Uri url = Uri.parse(baseUrl);
-     var request = http.MultipartRequest('POST', url)
-     ..headers['Cookie'] = 'PHPSESSID=${_phpsessid ?? await getPHPSESSID()}'
-     ..fields['game'] = 'bb3'
-     ..fields['cat'] = 'admin'
+    var request = http.MultipartRequest('POST', url)
      ..fields['query'] = 'administrate_league'
-     ..fields['debug'] = ''
-     ..fields['t'] = DateTime.now().second.toString()
      ..fields['bb3_administrate_league_League'] = leagueId;
+
+    _applyBaseFields(request.fields);
+    _applyCookie(request.headers);
 
     final response = await request.send();
 
@@ -129,6 +132,54 @@ class AdminWebsiteService extends ChangeNotifier {
       await _parse(response, bytes);
     }
     loading = false;
+  }
+
+  Future<void> selectCompetition(String compId) async {
+    loading = true;
+
+    Uri url = Uri.parse(baseUrl);
+    var request = http.MultipartRequest('POST', url)
+     ..fields['query'] = 'administrate_competition'
+     ..fields['bb3_administrate_competition_Competition'] = compId;
+
+    _applyBaseFields(request.fields);
+    _applyCookie(request.headers);
+
+    final response = await request.send();
+
+    final bytes = await response.stream.toBytes();
+
+    if (response.statusCode == 200) {
+      await _parse(response, bytes);
+    }
+    loading = false;
+  }
+
+  Future<bool> replaceTeam({required String replacingTeamId, required String replacedTeamId}) async {
+    loading = true;
+    Uri url = Uri.parse(baseUrl);
+    var request = http.MultipartRequest('POST', url)
+     ..fields['query'] = 'replace_team'
+     ..fields['bb3_replace_team_ReplacedTeam'] = replacedTeamId
+     ..fields['bb3_replace_team_ReplacingTeam'] = replacingTeamId;
+
+    _applyBaseFields(request.fields);
+    _applyCookie(request.headers);
+
+    final response = await request.send();
+
+    final bytes = await response.stream.toBytes();
+
+    bool isSuccess = false;
+    if (response.statusCode == 200) {
+      var doc = parse(bytes);
+      isSuccess = doc.getElementsByClassName('green success').isNotEmpty;
+      await reload();
+    } else {
+      print("FAILURE!");
+    }
+    loading = false;
+    return isSuccess;
   }
 
   Future<http.Response> reload() async {
@@ -143,6 +194,17 @@ class AdminWebsiteService extends ChangeNotifier {
     await _parse(response, response.bodyBytes);
 
     return response;
+  }
+
+  void _applyBaseFields(Map<String, String> fields) {
+    fields['game'] = 'bb3';
+    fields['cat'] = 'admin';
+    fields['debug'] = '';
+    fields['t'] = DateTime.now().second.toString();
+  }
+
+  void _applyCookie(Map<String, String> headers) async {
+    headers['Cookie'] = 'PHPSESSID=${_phpsessid ?? await getPHPSESSID()}';
   }
 
   Future<bool> _parse(BaseResponse response, Uint8List bytes) async {
@@ -163,6 +225,8 @@ class AdminWebsiteService extends ChangeNotifier {
     _parseLeagues(doc);
     _parseCompetitions(doc);
     _parseLeagueCompetitions(doc);
+    _parseCompetitionTeams(doc);
+    _parseReplacingTeams(doc);
     notifyListeners();
     return true;
   }
@@ -228,6 +292,34 @@ class AdminWebsiteService extends ChangeNotifier {
 
         if (id != null && name != null) {
           leagueCompetitions.add(Competition(id: id, name: name));
+        } 
+      }
+    }
+  }
+
+  Future<void> _parseCompetitionTeams(Document doc) async {
+    final replacedTeamSelector = doc.getElementById('bb3_replace_team_ReplacedTeam');
+    if (replacedTeamSelector != null) {
+      for (var child in replacedTeamSelector.children) {
+        final id = child.attributes['value'];
+        final name = child.attributes['label'];
+
+        if (id != null && name != null) {
+          compTeams.add(Team(id: id, name: name));
+        } 
+      }
+    }
+  }
+
+  Future<void> _parseReplacingTeams(Document doc) async {
+    final replacingTeamSelector = doc.getElementById('bb3_replace_team_ReplacingTeam');
+    if (replacingTeamSelector != null) {
+      for (var child in replacingTeamSelector.children) {
+        final id = child.attributes['value'];
+        final name = child.attributes['label'];
+
+        if (id != null && name != null) {
+          replacingTeams.add(Team(id: id, name: name));
         } 
       }
     }

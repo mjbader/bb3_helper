@@ -13,6 +13,7 @@ dependencies:
   bloodbowl3_dart:
     git: git@github.com:mjbader/bloodbowl3_dart.git
   cupertino_icons: ^1.0.8
+  csv: ^6.0.0
   ffi: ^2.1.5
   http: ^1.5.0
   fluent_ui: ^4.13.0
